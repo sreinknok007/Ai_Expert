@@ -1,68 +1,162 @@
+
 import cv2
+
 import numpy as np
 import matplotlib.pyplot as plt
 
 
-cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
-if not cap.isOpened():
-    raise RuntimeError("Could not open camera")
+def apply_color_filter(image, filter_type):
 
+    """Apply the specified color filter to the image."""
 
-# print(frame.shape, frame.dtype)  # e.g., (480, 640, 3) uint8
-while True:
- 
- ret, frame = cap.read()
+    # Create a copy of the image to avoid modifying the original
 
-############## Skin Masking  #############
-# 1. Convert to HSV for color filtering
- hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-
-# 2. Define the range for skin color in HSV
- lower_skin = np.array([0, 20, 70], dtype=np.uint8)
- upper_skin = np.array([40, 255, 255], dtype=np.uint8)
- 
- # 3. Create a mask to detect skin color
- mask = cv2.inRange(hsv, lower_skin, upper_skin)
-
- # 4. Apply the mask to the frame
- result = cv2.bitwise_and(frame, frame, mask=mask)
-
-############# Applying Contours #############
- contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    # If contours are found, draw them
-
- if contours:
-    # print("Flag 1")
-    max_contour = max(contours, key=cv2.contourArea)  # Get largest contour
-
-    if cv2.contourArea(max_contour) > 500:  # Ignore small contours
-
-        # Draw the bounding box around the detected hand
-
-        x, y, w, h = cv2.boundingRect(max_contour)
-
-        cv2.rectangle(result, (x, y), (x + w, y + h), (0, 255, 0), 2)
+    filtered_image = image.copy()
 
 
-        # Get the center of the hand for further tracking or interaction
+    if filter_type == "red_tint":
 
-        center_x = int(x + w / 2)
+        # Remove blue and green channels for red tint
 
-        center_y = int(y + h / 2)
+        filtered_image[:, :, 1] = 0  # Green channel to 0
 
-        cv2.circle(result, (center_x, center_y), 5, (0, 0, 255), -1)  # Red dot at cente
+        filtered_image[:, :, 2] = 0  # Blue channel to 0
 
- cv2.imshow("original Frame",frame)
- cv2.imshow("Filtered Frame", result)
-    # Exit on q / ESC
- key = cv2.waitKey(1) & 0xFF  
- if key in (ord('q'), 27):
-    break
- 
 
-# cv2.waitkey(0)
-cap.release()
-cv2.destroyAllWindows()
+    elif filter_type == "blue_tint":
+
+        # Remove red and green channels for blue tint
+
+        filtered_image[:, :, 1] = 0  # Green channel to 0
+
+        filtered_image[:, :, 0] = 0  # Red channel to 0
+
+
+    elif filter_type == "green_tint":
+
+        # Remove blue and red channels for green tint
+
+        filtered_image[:, :, 2] = 0  # Blue channel to 0
+
+        filtered_image[:, :, 0] = 0  # Red channel to 0
+
+
+    elif filter_type == "increase_red":
+
+        # Increase the intensity of the red channel
+
+        filtered_image[:, :, 0] = cv2.add(filtered_image[:, :, 0], 50)  # Increase red channel
+
+
+    elif filter_type == "decrease_blue":
+
+        # Decrease the intensity of the blue channel
+
+        filtered_image[:, :, 2] = cv2.subtract(filtered_image[:, :, 2], 50)  # Decrease blue channel
+
+
+    return filtered_image
+
+
+# Load the image
+
+image_path = 'Naru.jpg'  # Provide your image path
+
+image = cv2.imread(image_path)
+image = cv2.imread('Naru.jpg')
+
+
+if image is None:
+
+    print("Error: Image not found!")
+
+else:
+
+    filter_type = "original"  # Default filter type
+
+
+    print("Press the following keys to apply filters:")
+
+    print("r - Red Tint")
+
+    print("b - Blue Tint")
+
+    print("g - Green Tint")
+
+    print("i - Increase Red Intensity")
+
+    print("d - Decrease Blue Intensity")
+
+    print("q - Quit")
+
+
+
+    while True:
+
+        key = input("Enter Key to process: r/b/g/i/d/q")
+
+
+
+
+        # Map key presses to filters
+
+        if key == 'r':
+
+             filter_type = "red_tint"
+             # Apply the selected filter
+             filtered_image = apply_color_filter(image, filter_type)
+            # Display the filtered image
+             plt.title(f"Filtered Image - {filter_type}")
+             plt.imshow(filtered_image)
+             plt.show()
+
+        elif key == 'b':
+
+            filter_type = "blue_tint"
+            # Apply the selected filter
+            filtered_image = apply_color_filter(image, filter_type)
+            # Display the filtered image
+            plt.title(f"Filtered Image - {filter_type}")
+            plt.imshow(filtered_image)
+            plt.show()
+
+        elif key == 'g':
+
+            filter_type = "green_tint"
+            # Apply the selected filter
+            filtered_image = apply_color_filter(image, filter_type)
+            # Display the filtered image
+            plt.title(f"Filtered Image - {filter_type}")
+            plt.imshow(filtered_image)
+            plt.show()
+
+        elif key == 'i':
+
+            filter_type = "increase_red"
+            # Apply the selected filter
+            filtered_image = apply_color_filter(image, filter_type)
+            # Display the filtered image
+            plt.title(f"Filtered Image - {filter_type}")
+            plt.imshow(filtered_image)
+            plt.show()
+
+        elif key == 'd':
+
+            filter_type = "decrease_blue"
+            # Apply the selected filter
+            filtered_image = apply_color_filter(image, filter_type)
+            # Display the filtered image
+            plt.title(f"Filtered Image - {filter_type}")
+            plt.imshow(filtered_image)
+            plt.show()
+
+        elif key == 'q':
+
+            print("Exiting...")
+
+            break
+
+        else:
+
+            print("Invalid key! Please use 'r', 'b', 'g', 'i', 'd', or 'q'.")
