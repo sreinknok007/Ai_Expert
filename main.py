@@ -1,162 +1,203 @@
-
 import cv2
-
+import mediapipe as mp
+import time
 import numpy as np
-import matplotlib.pyplot as plt
 
 
+# Initialize MediaPipe Hands
 
-def apply_color_filter(image, filter_type):
+mp_hands = mp.solutions.hands
+hands = mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7)
+mp_draw = mp.solutions.drawing_utils
 
-    """Apply the specified color filter to the image."""
 
-    # Create a copy of the image to avoid modifying the original
+# Filters to cycle through
 
-    filtered_image = image.copy()
+filters = [
+    None,  # No filter
+    'GRAYSCALE',  # Grayscale filter
+    'SEPIA',  # Sepia filter
+    'NEGATIVE',  # Negative filter
+    'BLUR'  # Blur filter
+]
 
+current_filter = 0  # Starting filter
 
-    if filter_type == "red_tint":
 
-        # Remove blue and green channels for red tint
+# Webcam setup
+cap = cv2.VideoCapture(0,cv2.CAP_DSHOW)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 
-        filtered_image[:, :, 1] = 0  # Green channel to 0
+if not cap.isOpened():
 
-        filtered_image[:, :, 2] = 0  # Blue channel to 0
+    print("Error: Could not access the webcam.")
+    exit()
 
 
-    elif filter_type == "blue_tint":
+# Timestamp for debouncing gestures
 
-        # Remove red and green channels for blue tint
+last_action_time = 0
 
-        filtered_image[:, :, 1] = 0  # Green channel to 0
+debounce_time = 1  # 1 second debounce between actions
 
-        filtered_image[:, :, 0] = 0  # Red channel to 0
 
+# Function to apply filters
 
-    elif filter_type == "green_tint":
+def apply_filter(frame, filter_type):
 
-        # Remove blue and red channels for green tint
+    if filter_type == 'GRAYSCALE':
 
-        filtered_image[:, :, 2] = 0  # Blue channel to 0
+        return cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-        filtered_image[:, :, 0] = 0  # Red channel to 0
+    elif filter_type == 'SEPIA':
 
+        sepia_filter = np.array([[0.272, 0.534, 0.131],
 
-    elif filter_type == "increase_red":
+                                 [0.349, 0.686, 0.168],
 
-        # Increase the intensity of the red channel
+                                 [0.393, 0.769, 0.189]])
 
-        filtered_image[:, :, 0] = cv2.add(filtered_image[:, :, 0], 50)  # Increase red channel
+        sepia_frame = cv2.transform(frame, sepia_filter)
 
+        sepia_frame = np.clip(sepia_frame, 0, 255)  # Clip values to ensure valid range
 
-    elif filter_type == "decrease_blue":
+        return sepia_frame.astype(np.uint8)
 
-        # Decrease the intensity of the blue channel
+    elif filter_type == 'NEGATIVE':
 
-        filtered_image[:, :, 2] = cv2.subtract(filtered_image[:, :, 2], 50)  # Decrease blue channel
+        return cv2.bitwise_not(frame)
 
+    elif filter_type == 'BLUR':
 
-    return filtered_image
+        return cv2.GaussianBlur(frame, (15, 15), 0)
 
+    return frame
 
-# Load the image
 
-image_path = 'Naru.jpg'  # Provide your image path
+while True:
 
-image = cv2.imread(image_path)
-image = cv2.imread('Naru.jpg')
+    success, img = cap.read()
 
+    if not success:
 
-if image is None:
+        print("Failed to read frame from webcam.")
 
-    print("Error: Image not found!")
+        break
 
-else:
 
-    filter_type = "original"  # Default filter type
+    img = cv2.flip(img, 1)  # Flip the image for a mirror effect
 
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    print("Press the following keys to apply filters:")
+    results = hands.process(img_rgb)
 
-    print("r - Red Tint")
 
-    print("b - Blue Tint")
+    if results.multi_hand_landmarks:
 
-    print("g - Green Tint")
+        for hand_landmarks in results.multi_hand_landmarks:
 
-    print("i - Increase Red Intensity")
+            mp_draw.draw_landmarks(img, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
-    print("d - Decrease Blue Intensity")
 
-    print("q - Quit")
+            # Get key landmarks
 
+            thumb_tip = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP]
 
+            index_tip = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
 
-    while True:
+            middle_tip = hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_TIP]
 
-        key = input("Enter Key to process: r/b/g/i/d/q")
+            ring_tip = hand_landmarks.landmark[mp_hands.HandLandmark.RING_FINGER_TIP]
 
+            pinky_tip = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_TIP]
 
 
+            # Frame dimensions
 
-        # Map key presses to filters
+            frame_height, frame_width, _ = img.shape
 
-        if key == 'r':
 
-             filter_type = "red_tint"
-             # Apply the selected filter
-             filtered_image = apply_color_filter(image, filter_type)
-            # Display the filtered image
-             plt.title(f"Filtered Image - {filter_type}")
-             plt.imshow(filtered_image)
-             plt.show()
-
-        elif key == 'b':
-
-            filter_type = "blue_tint"
-            # Apply the selected filter
-            filtered_image = apply_color_filter(image, filter_type)
-            # Display the filtered image
-            plt.title(f"Filtered Image - {filter_type}")
-            plt.imshow(filtered_image)
-            plt.show()
-
-        elif key == 'g':
-
-            filter_type = "green_tint"
-            # Apply the selected filter
-            filtered_image = apply_color_filter(image, filter_type)
-            # Display the filtered image
-            plt.title(f"Filtered Image - {filter_type}")
-            plt.imshow(filtered_image)
-            plt.show()
-
-        elif key == 'i':
-
-            filter_type = "increase_red"
-            # Apply the selected filter
-            filtered_image = apply_color_filter(image, filter_type)
-            # Display the filtered image
-            plt.title(f"Filtered Image - {filter_type}")
-            plt.imshow(filtered_image)
-            plt.show()
-
-        elif key == 'd':
-
-            filter_type = "decrease_blue"
-            # Apply the selected filter
-            filtered_image = apply_color_filter(image, filter_type)
-            # Display the filtered image
-            plt.title(f"Filtered Image - {filter_type}")
-            plt.imshow(filtered_image)
-            plt.show()
-
-        elif key == 'q':
-
-            print("Exiting...")
-
-            break
-
-        else:
-
-            print("Invalid key! Please use 'r', 'b', 'g', 'i', 'd', or 'q'.")
+            # Convert normalized coordinates to pixel coordinates
+
+            thumb_x, thumb_y = int(thumb_tip.x * frame_width), int(thumb_tip.y * frame_height)
+            index_x, index_y = int(index_tip.x * frame_width), int(index_tip.y * frame_height)
+            middle_x, middle_y = int(middle_tip.x * frame_width), int(middle_tip.y * frame_height)
+            ring_x, ring_y = int(ring_tip.x * frame_width), int(ring_tip.y * frame_height)
+            pinky_x, pinky_y = int(pinky_tip.x * frame_width), int(pinky_tip.y * frame_height)
+
+
+            # Draw circles for landmarks
+
+            cv2.circle(img, (thumb_x, thumb_y), 10, (255, 0, 0), cv2.FILLED)
+
+            cv2.circle(img, (index_x, index_y), 10, (0, 255, 0), cv2.FILLED)
+
+            cv2.circle(img, (middle_x, middle_y), 10, (0, 0, 255), cv2.FILLED)
+
+            cv2.circle(img, (ring_x, ring_y), 10, (255, 255, 0), cv2.FILLED)
+
+            cv2.circle(img, (pinky_x, pinky_y), 10, (255, 0, 255), cv2.FILLED)
+
+
+            # Gesture Logic
+
+            current_time = time.time()
+
+
+            # Click picture: Thumb touches Index finger
+
+            if abs(thumb_x - index_x) < 30 and abs(thumb_y - index_y) < 30:
+
+                if current_time - last_action_time > debounce_time:
+
+                    cv2.putText(img, "Picture Captured!", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+                    last_action_time = current_time
+
+                    cv2.imwrite(f"picture_{int(time.time())}.jpg", img)
+
+                    print("Picture saved!")
+
+
+            # Change filter: Thumb touches any other finger
+
+            elif (abs(thumb_x - middle_x) < 30 and abs(thumb_y - middle_y) < 30) or (abs(thumb_x - ring_x) < 30 and abs(thumb_y - ring_y) < 30) or  (abs(thumb_x - pinky_x) < 30 and abs(thumb_y - pinky_y) < 30):
+
+                if current_time - last_action_time > debounce_time:
+
+                    current_filter = (current_filter + 1) % len(filters)
+
+                    last_action_time = current_time
+
+                    print(f"Switched to filter: {filters[current_filter]}")
+
+
+    # Apply the current filter
+
+    filtered_img = apply_filter(img, filters[current_filter])
+
+
+    # Display the output
+
+    if filters[current_filter] == 'GRAYSCALE':
+
+        cv2.imshow("Gesture-Controlled Photo App", cv2.cvtColor(filtered_img, cv2.COLOR_GRAY2BGR))
+
+    else:
+
+        cv2.imshow("Gesture-Controlled Photo App", filtered_img)
+
+
+    # Exit on 'q'
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+
+        break
+
+
+# Release resources
+
+cap.release()
+
+cv2.destroyAllWindows()
