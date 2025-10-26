@@ -1,13 +1,12 @@
 import requests
+url = "https://opentdb.com/api.php?amount=5&type=multiple"
 
-url = "https://official-joke-api.appspot.com/random_joke"
+respone = requests.get(url)
 
+if respone.status_code == 200:
+    triviadata = respone.json()
+    score = 0
 
-response = requests.get(url)
-
-
-if response.status_code == 200:
-    joke = response.json()
-    print(f"{joke['setup']} - {joke['punchline']}")
-else:
-    print("Failed to retrieve a joke.")
+    print(triviadata["results"][0]["question"])
+    print(triviadata["results"][0]["correct_answer"])
+    print(triviadata["results"][0]["incorrectw_answers"])
