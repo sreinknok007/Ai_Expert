@@ -1,12 +1,12 @@
 import requests
-url = "https://opentdb.com/api.php?amount=5&type=multiple"
 
-respone = requests.get(url)
-
-if respone.status_code == 200:
-    triviadata = respone.json()
-    score = 0
-
-    print(triviadata["results"][0]["question"])
-    print(triviadata["results"][0]["correct_answer"])
-    print(triviadata["results"][0]["incorrectw_answers"])
+def grf():
+    url = "https://uselessfacts.jsph.pl/random.json?language=en"
+    responce = requests.get(url)
+    if responce.status_code == 200:
+        d = responce.json()
+        print("Not Funny Facts")
+        print(d["text"])
+    else:
+        print("Not Working Slow internet")
+grf()
