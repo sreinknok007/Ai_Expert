@@ -1,47 +1,54 @@
-import random
-import time
+import speech_recognition as sr
+import pyttsx3
+from datetime import datetime
 
+def speak(text):
+    engine = pyttsx3.init()
+    engine.setProperty('rate', 150)
+    engine.say(text)
+    engine.runAndWait()
 
-try:
-    import pyttsx3
-    TTS_AVAIABLE = True
-except ImportError:
-    TTS_AVAIABLE = False
-    print("ERROR")
-def setup_tts():
-    if not TTS_AVAIABLE:
-        return None
+def get_audio():
+    r = sr.Recognizer()
+    with sr.Microphone() as source:
+        print("???? Speak now...")
+        audio = r.listen(source)
     try:
-        engine = pyttsx3.init()
-        voices = engine.getProperty("voices")
-        print(f"Voices found:{[voice.name + voice.id for voice in voices]}")
-        selected_voice = random.choice(voices)
+        command = r.recognize_google(audio)
+        print(f"✔ You said: {command}")
+        return command.lower()
 
-        engine.setProperty('rate', 150)        
-        engine.setProperty('volume', 0.8)      
-        engine.setProperty('language', 'en_US')  
-        engine.setProperty('age', 'adult')     
-        engine.setProperty('gender', 'female') 
-        engine.setProperty('voice', selected_voice.id)
-        return engine
-    except Exception as e:
-        print(f"ERROR {e}")
-        return None
-    
-def speak(engine,text):
-    if engine:
-        try:
-            engine.say(text)
-            engine.runAndWait()
-        except Exception as e:
-            print(f"Eroor:{e}")
-        else:
-            print("TTS engine not avaiable")
+    except sr.UnknownValueError:
+        print("✘ Could not understand.")
+
+    except sr.RequestError as e:
+        print(f"✘ API Error: {e}")
+
+    return ""
+def respond_to_command(command):
+    if "hello" in command:
+        speak("Hi there! How can I help you today?")
+
+    elif "your name" in command:
+        speak("I am your Python voice assistant.")
+
+    elif "time" in command:
+        now = datetime.now().strftime("%H:%M")
+        speak(f"The time is {now}")
+
+    elif "exit" in command or "stop" in command:
+        speak("Goodbye!")
+        return False
+
+    else:
+        speak("I'm not sure how to help with that.")
+
+    return True
+
+
 def main():
-    engine = setup_tts()
-    speak(engine, 'Sally sells seasyeell')
-    time.sleep(5)
-    speak(engine, "hiiiiiiiiii")
-if __name__ =="__main__":
+    speak("Voice assistant activated. Say something!")
+    while True:
+        command = get_audio()
+if __name__ == "__main__":
     main()
-
