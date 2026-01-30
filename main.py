@@ -1,68 +1,65 @@
-import speech_recognition as sr
-import pyttsx3
-from googletrans import Translator  # Google Translate API
+import config
 
-# Initialize text-to-speech engine
-def speak(text, language="en"):
-    engine = pyttsx3.init()
-    engine.setProperty('rate', 150)  # Speed of speech
-    voices = engine.getProperty('voices')
+from openai import OpenAI
 
-    # Set voice for English or other language if supported by pyttsx3
-    if language == "en":
-        engine.setProperty('voice', voices[0].id)  # Default English voice
-    else:
-        engine.setProperty('voice', voices[1].id)  # Fallback to another voice if available
 
-    engine.say(text)
-    engine.runAndWait()
 
-# Speech-to-Text: Recognize spoken language (English)
-def speech_to_text():
- def speech_to_text():
-    recognizer = sr.Recognizer()
-    with sr.Microphone() as source:
-        print("???? Please speak now in English...")
-        audio = recognizer.listen(source)
+GROQ_URL = "https://api.groq.com/openai/v1"
 
-    try:
-        print("???? Recognizing speech...")
-        text = recognizer.recognize_google(audio, language="en-US") 
-        print(f"✅ You said: {text}")
-        return text
-    except sr.UnknownValueError:
-        print("❌ Could not understand the audio.")
-    except sr.RequestError as e:
-        print(f"❌ API Error: {e}")
-    return ""
+MODELS = getattr(config, "GROQ_MODELS", ["llama-3.1-8b-instant", "mixtral-8x7b-32768"])
 
-def translate_text(text, target_language="es"):  #
-    translator = Translator()
-    translation = translator.translate(text, dest=target_language)
-    print(f"???? Translated text: {translation.text}")
-    return translation.text
-def display_language_options():
-    print("???? Available translation languages:")
-    print("1. Hindi (hi)")
-    print("2. Tamil (ta)")
-    print("3. Telugu (te)")
-    print("4. Bengali (bn)")
-    print("5. Marathi (mr)")
-    print("6. Gujarati (gu)")
-    print("7. Malayalam (ml)")
-    print("8. Punjabi (pa)")
 
-# User selects language
-choice = input("Please select the target language number (1-8): ")
-language_dict = {
-    "1": "hi",
-    "2": "ta",
-    "3": "te",
-    "4": "bn",
-    "5": "mr",
-    "6": "gu",
-    "7": "ml",
-    "8": "pa"
-}
- 
- 
+
+def generate_response(prompt: str, temperature: float = 0.3, max_tokens: int = 512) -> str:
+
+    key = getattr(config, "GROQ_API_KEY", None)
+
+    if not key:
+
+        return "Error: GROQ_API_KEY missing in config.py"
+
+    c = OpenAI(api_key=key, base_url=GROQ_URL)
+
+
+
+    last_err = None
+
+    for m in MODELS:
+
+        try:
+
+            r = c.chat.completions.create(
+
+                model=m,
+
+                messages=[{"role": "user", "content": prompt}],
+
+                temperature=temperature,
+
+                max_tokens=max_tokens,
+
+            )
+
+            return r.choices[0].message.content
+
+        except Exception as e:
+
+            last_err = e
+
+
+
+    return (
+
+        "Groq model failed.\n"
+
+        f"Tried models: {MODELS}\n"
+
+        "Fix:\n"
+
+        "1) Switch to hf by importing hf.py in main.py OR\n"
+
+        "2) Replace Groq model in groq.py (GROQ_MODELS).\n"
+
+        f"Details: {type(last_err).__name__}: {last_err}"
+
+    )
